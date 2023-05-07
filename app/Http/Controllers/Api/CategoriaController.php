@@ -8,6 +8,10 @@ use Illuminate\Http\Request;
 use App\Http\Requests\StoreCategoriaRequest;
 use App\Http\Resources\CategoriaResource;
 use App\Models\Categoria;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\Validator;
 
 class CategoriaController extends Controller
 {
@@ -16,17 +20,26 @@ class CategoriaController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
-    {
-        $categorias = Categoria::all();
+    public function index(Request $request)
+    { {
+            // Captura a coluna para ordenacao
+            $sortParameter = $request->input('ordenacao', 'nome_da_categoria');
+            $sortDirection = Str::startsWith($sortParameter, '-') ? 'desc' : 'asc';
+            $sortColumn = ltrim($sortParameter, '-');
 
-        return response() -> json([
-            'status' => 200,
-            'mensagem' => 'Lista de categorias retornada',
-            'categorias' => CategoriaResource::collection($categorias)
-        ], 200);
+            // Determina se faz a query ordenada ou aplica o default
+            if ($sortColumn == 'nome_da_categoria') {
+                $categorias = Categoria::orderBy('nomedacategoria', $sortDirection)->get();
+            } else {
+                $categorias = Categoria::all();
+            }
 
-        //comentario
+            return response()->json([
+                'status' => 200,
+                'mensagem' => 'Lista de categorias retornada',
+                "categorias" => CategoriaResource::collection($categorias)
+            ], 200);
+        }
     }
 
     /**
@@ -38,7 +51,7 @@ class CategoriaController extends Controller
     public function store(StoreCategoriaRequest $request)
     {
         // Cria o objeto 
-        $categoria =new Categoria();
+        $categoria = new Categoria();
 
         // Transfere os valores
         $categoria->nomedacategoria = $request->nome_da_categoria;
@@ -47,7 +60,7 @@ class CategoriaController extends Controller
         $categoria->save();
 
         // Retorna o resultado
-        return response() -> json([
+        return response()->json([
             'status' => 200,
             'mensagem' => 'Categoria criada',
             'categoria' => new CategoriaResource($categoria)
@@ -60,17 +73,51 @@ class CategoriaController extends Controller
      * @param  \App\Models\Categoria  $categoria
      * @return \Illuminate\Http\Response
      */
-    public function show(Categoria $categoria)
+    public function show($categoriaid)
     {
-        $categoria = Categoria::find($categoria->pkcategoria);
+        try{
+            $validator = Validator::make(['id' => $categoriaid],
+            [
+                'id' => 'interger'
+            ]);
 
-        return response() -> json([
+            if($validator->fails()) {
+                throw ValidationException::withMessages(['id' => 'O campo Id deve ser número']);
+            }
+        $categoria = Categoria::findorFail($categoriaid);
+
+        return response()->json([
             'status' => 200,
             'mensagem' => 'Categoria retornada',
             'categoria' => new CategoriaResource($categoria)
-        ]);
+            ]);
+        }catch(\Exception $ex) {
+            $class = get_class($ex);
+            switch($class) {
+                case ModelNotFoundException::class:
+                    return response() -> json([
+                        'status' => 404,
+                        'mensagem' =>  'Categoria não encontrada',
+                        'categoria' => []
+                    ], 404);
+                break;
+                case ValidationException::class:
+                    return response() -> json([
+                        'status' => 406,
+                        'mensagem' =>  $ex->getMessage(),
+                        'categoria' => []
+                    ], 406);
+                break;
+                default: 
+                    return response() -> json([
+                        'status' => 500,
+                        'mensagem' =>  'Erro interno',
+                        'categoria' => []
+                    ], 500);
+                    break;
+            }
+        }
     }
-    
     /**
      * Update the specified resource in storage.
      *
@@ -84,7 +131,7 @@ class CategoriaController extends Controller
         $categoria->nomedacategoria = $request->nome_da_categoria;
         $categoria->update();
 
-        return response() -> json([
+        return response()->json([
             'status' => 200,
             'mensagem' => 'Categoria atualizada'
         ], 200);
@@ -100,7 +147,7 @@ class CategoriaController extends Controller
     {
         $categoria->delete();
 
-        return response() -> json([
+        return response()->json([
             'status' => 200,
             'mensagem' => 'Categoria apagada'
         ], 200);

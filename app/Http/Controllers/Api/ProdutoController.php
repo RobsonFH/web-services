@@ -8,7 +8,7 @@ use Illuminate\Http\Request;
 use App\Http\Requests\StoreProdutoRequest;
 use App\Models\Produto;
 use App\Http\Resources\ProdutoResource;
-
+use Illuminate\Support\Str;
 class ProdutoController extends Controller
 {
     /**
@@ -16,18 +16,81 @@ class ProdutoController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        // Carrega as tabelas adicionais
-        $produto = Produto::with('categoria', 'marca')->get();
+       $query = Produto::whit('categoria', 'marca');
+       $mensagem = "Lista de produtos retornada";
+       $codigoderetorno = 0;
 
-        return response() -> json([
-            'status' => 200,
-            'mensagem' => 'Lista de produtos retornada',
-            'produtos' => ProdutoResource::collection($produto)
-        ], 200);
+       $filterParameter = $request -> input("filtro");
+
+       if($filterParameter == null) {
+        
+        $mensagem = "Lista de produtos retornada - Completa";
+        $codigoderetorno =200;
+
+       } else {
+        [$filterCriteria, $filterValue] = explode (":", $filterParameter);
+
+        if ($filterCriteria == "nome_da_categoria"){
+
+            $produtos = $query->join("categorias", "pkcategoria","=","fkcategoria")->where("nomedacategoria","=",$filterValue);
+            $mensagem = "Lista de produtos retornada - Filtrada";
+            $codigoderetorno = 200;
+
+        }else{
+            $produtos = [];
+            $mensagem = "Filtro nao aceito";
+            $codigoderetorno = 406;
+        }
+       }
+
+       if($codigoderetorno == 200){
+        if($request->input('ordenacao', '')){
+            $sorts = explode(',', $request->input('ordenacao', ''));
+
+            foreach($sorts as $sortColumn) {
+                $sortDirection = Str::startsWith($sortColumn, '-') ? 'desc' : 'asc';
+                $sortColumn = ltrim($sortColumn, '-');
+
+                switch($sortColumn){
+                    case("nome_do_produto"):
+                        $query->orderBy('nomedoproduto', $sortDirection);
+                        break;
+                    case("ano_do_modelo"):
+                        $query->orderBy('anodomodelo', $sortDirection);
+                        break;
+                    case("preco_de_lista"):
+                        $query->orderBy('precodelista', $sortDirection);
+                        break;
+                }
+            }
+            $mensagem = $mensagem . "+Ordenada";
+        }
+    }
+    $input = $request->input('pagina');
+    if($input){
+        $page = $input;
+        $perPage = 10;
+        $query->offset(($page-1) * $perPage)->limit($perPage);
+        $produtos = $query->get();
+
+        $recordsTotal = Produto::count();
+        $numberOfPages = ceil($recordsTotal / $perPage);
+
+        $mensagem = $mensagem . "+Paginada";
     }
 
+if ($codigoderetorno == 200){
+$produtos = $query->get();
+$response = response() -> json(['status' => 200, 'mensagem' => $mensagem, 'produtos' => ProdutoResource::collection($produtos)], 200);
+}else {
+
+$response = response()->json(['status' => 406, 'mensagem' => $mensagem, 'produtos' => $produtos], 406);
+}
+
+return $response;
+    }
     /**
      * Store a newly created resource in storage.
      *

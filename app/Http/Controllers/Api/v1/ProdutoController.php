@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
-use App\Http\Requests\StoreProdutoRequest;
+use App\Http\Requests\v1\StoreProdutoRequest;
 use App\Models\Produto;
-use App\Http\Resources\ProdutoResource;
+use App\Http\Resources\v1\ProdutoResource;
 use Illuminate\Support\Str;
 class ProdutoController extends Controller
 {

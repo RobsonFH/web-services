@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Api\v1;
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 
-use App\Http\Requests\StoreClienteRequest;
-use App\Http\Resources\ClienteResource;
+use App\Http\Requests\v1\StoreClienteRequest;
+use App\Http\Resources\v1\ClienteResource;
 use App\Models\Cliente;
 
 class ClienteController extends Controller

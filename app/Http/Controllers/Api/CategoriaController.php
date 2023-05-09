@@ -9,7 +9,7 @@ use App\Http\Requests\StoreCategoriaRequest;
 use App\Http\Resources\CategoriaResource;
 use App\Models\Categoria;
 
-class CategoriaController extends Controller
+class CategoriasController extends Controller
 {
     /**
      * Display a listing of the resource.
